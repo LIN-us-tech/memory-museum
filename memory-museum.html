@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Memory Museum · 记忆馆</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4/dist/av-min.js"></script>
+  <script src="https://webapi.amap.com/maps?v=2.0&key=你的高德Key"></script>
+  <style>
+    :root{
+      --bg:#111; --fg:#f5f5f5; --accent:#e6c35c;
+      --card:#222; --radius:12px; --shadow:0 8px 20px rgba(0,0,0,.5);
+    }
+    *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,PingFang SC,Hiragino Sans GB,Microsoft YaHei,sans-serif;}
+    body{background:var(--bg);color:var(--fg);}
+    a{color:var(--accent);text-decoration:none;}
+    /*导航*/
+    nav{height:60px;display:flex;align-items:center;padding:0 24px;font-size:20px;font-weight:600;border-bottom:1px solid #333;}
+    /*时间轴*/
+    #timeline{padding:40px 24px;display:flex;flex-wrap:wrap;gap:24px;justify-content:center;}
+    .card{position:relative;width:320px;background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);transition:transform .3s;}
+    .card:hover{transform:translateY(-6px);}
+    .card-color{height:6px;background:linear-gradient(90deg,var(--c1),var(--c2));}
+    .card-body{padding:16px;display:flex;gap:12px;}
+    .card-img{width:100px;height:100px;object-fit:cover;border-radius:6px;background:#000;}
+    .card-txt{flex:1;font-size:14px;line-height:1.6;color:#ddd;}
+    .card-id{position:absolute;top:10px;right:12px;font-size:12px;color:var(--accent);letter-spacing:1px;}
+    /*悬浮新增*/
+    .fab{position:fixed;right:24px;bottom:24px;width:56px;height:56px;border-radius:50%;background:var(--accent);color:#000;display:grid;place-items:center;font-size:24px;box-shadow:var(--shadow);cursor:pointer;z-index:999;}
+    /*抽屉上传*/
+    #drawer{position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;place-items:center;z-index:1000;}
+    .panel{width:90%;max-width:480px;background:var(--card);border-radius:var(--radius);padding:24px;}
+    .panel h3{margin-bottom:16px;text-align:center;color:var(--accent);}
+    .input{width:100%;padding:10px;margin-bottom:12px;border:1px solid #444;border-radius:6px;background:#111;color:var(--fg);}
+    .btn{width:100%;padding:12px;border:none;border-radius:6px;background:var(--accent);color:#000;font-size:16px;cursor:pointer;}
+    .btn:disabled{opacity:.4;}
+    /*星图*/
+    #starMap{position:fixed;inset:0;background:#000;display:none;}
+    #starMapClose{position:absolute;top:16px;right:24px;font-size:24px;color:var(--accent);cursor:pointer;z-index:1001;}
+  </style>
+</head>
+<body>
+  <nav>Memory Museum · 记忆馆</nav>
+
+  <!-- 时间轴 -->
+  <div id="timeline"></div>
+
+  <!-- 悬浮 + -->
+  <div class="fab" id="addBtn">+</div>
+
+  <!-- 上传抽屉 -->
+  <div id="drawer">
+    <div class="panel">
+      <h3>留下一段记忆</h3>
+      <textarea id="words" class="input" rows="3" placeholder="写下当时的心情..."></textarea>
+      <input id="photo" type="file" accept="image/*" class="input">
+      <button id="locateBtn" class="btn">获取位置</button>
+      <button id="submitBtn" class="btn" disabled>生成底片</button>
+      <button id="cancelBtn" class="btn" style="background:#555;color:#fff;margin-top:10px;">取消</button>
+    </div>
+  </div>
+
+  <!-- 记忆星图 -->
+  <div id="starMap">
+    <span id="starMapClose">✕</span>
+    <div id="starMapContainer" style="width:100%;height:100%"></div>
+  </div>
+
+  <script>
+    /* ============ 配置 ============ */
+    const APP_ID = '7gVEbYY5q3wVTI4tzphtcvbr-gzGzoHsz '
+    const APP_KEY = 'DI6vIMLAN9nDtVtU3qePSWaC '
+    const MAP_KEY = 'phDZe9nV06VMlniWwVWtA0TzVkK6qKsl'
+    /* ============================== */
+    AV.init({ appId: APP_ID, appKey: APP_KEY })
+
+    const addBtn = document.getElementById('addBtn')
+    const drawer = document.getElementById('drawer')
+    const cancelBtn = document.getElementById('cancelBtn')
+    const locateBtn = document.getElementById('locateBtn')
+    const submitBtn = document.getElementById('submitBtn')
+    const wordsInp = document.getElementById('words')
+    const photoInp = document.getElementById('photo')
+    const timeline = document.getElementById('timeline')
+
+    let lat, lng, photoURL = ''
+
+    /* 随机暖色渐变 */
+    function randColor(){
+      const c1 = `hsl(${30+Math.random()*30}, 80%, 60%)`
+      const c2 = `hsl(${10+Math.random()*20}, 90%, 50%)`
+      return {c1,c2}
+    }
+
+    /* 打开/关闭抽屉 */
+    addBtn.onclick = () => drawer.style.display = 'grid'
+    cancelBtn.onclick = () => drawer.style.display = 'none'
+
+    /* 1. 获取位置 */
+    locateBtn.onclick = () => {
+      if (!navigator.geolocation) return alert('浏览器不支持定位')
+      locateBtn.disabled = true
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          lat = pos.coords.latitude
+          lng = pos.coords.longitude
+          locateBtn.textContent = '已定位'
+          submitBtn.disabled = false
+        },
+        err => {
+          alert('定位失败：'+err.message)
+          locateBtn.disabled = false
+        }
+      )
+    }
+
+    /* 2. 上传图片（压缩） */
+    photoInp.onchange = e => {
+      const file = e.target.files[0]
+      if (!file) return
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+        const max = 1280
+        const scale = Math.min(max/img.width, max/img.height, 1)
+        canvas.width = img.width * scale
+        canvas.height = img.height * scale
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+        canvas.toBlob(async blob => {
+          const f = new AV.File(file.name, blob)
+          await f.save()
+          photoURL = f.get('url')
+          alert('照片已压缩上传！')
+        }, 'image/jpeg', 0.8)
+      }
+      img.src = URL.createObjectURL(file)
+    }
+
+    /* 3. 提交记忆 */
+    submitBtn.onclick = async () => {
+      const w = wordsInp.value.trim()
+      if (!w) return alert('请输入文字')
+      if (!lat) return alert('请先获取位置')
+      const {c1,c2} = randColor()
+      const Memory = AV.Object.extend('Memory')
+      const m = new Memory()
+      m.set('words', w)
+      m.set('photo', photoURL)
+      m.set('location', new AV.GeoPoint(lat, lng))
+      m.set('color', {c1,c2})
+      m.set('memoryId', 'M'+Math.random().toString(36).slice(2,10).toUpperCase())
+      await m.save()
+      alert('记忆已入库！')
+      drawer.style.display = 'none'
+      resetForm()
+      fetchTimeline()
+    }
+
+    function resetForm(){
+      wordsInp.value = ''
+      photoInp.value = ''
+      photoURL = ''
+      lat = ''
+      lng = ''
+      locateBtn.disabled = false
+      locateBtn.textContent = '获取位置'
+      submitBtn.disabled = true
+    }
+
+    /* 4. 拉取时间轴 */
+    async function fetchTimeline(){
+      const q = new AV.Query('Memory')
+      q.descending('createdAt')
+      q.limit(100)
+      const data = await q.find()
+      timeline.innerHTML = data.map((o,i) => {
+        const {c1,c2} = o.get('color')
+        const pos = o.get('location')
+        return `
+          <div class="card" style="--c1:${c1};--c2:${c2}">
+            <div class="card-color"></div>
+            <span class="card-id">${o.get('memoryId')}</span>
+            <div class="card-body">
+              ${o.get('photo') ? `<img class="card-img" src="${o.get('photo')}" />` : ''}
+              <div class="card-txt">
+                ${o.get('words')}
+                <br><a href="javascript:openStarMap(${pos.latitude},${pos.longitude})">在星图发光</a>
+              </div>
+            </div>
+          </div>`
+      }).join('')
+    }
+
+    /* 5. 记忆星图（单点） */
+    let starMap, starMarker
+    function openStarMap(lat, lng){
+      document.getElementById('starMap').style.display = 'block'
+      if (!starMap){
+        starMap = new AMap.Map('starMapContainer', {
+          zoom: 13, center: [lng, lat], skyColor: '#000', showLabel: false
+        })
+      }else{
+        starMap.setCenter([lng, lat])
+      }
+      if (starMarker) starMap.remove(starMarker)
+      starMarker = new AMap.Marker({
+        position: [lng, lat], map: starMap,
+        icon: new AMap.Icon({
+          image: 'https://img.alicdn.com/imgextra/i3/O1CN01o6tK8Y1LzUcTqP3yq_!!6000000001372-55-tps-64-64.svg',
+          size: new AMap.Size(48, 48), imageSize: new AMap.Size(48, 48)
+        })
+      })
+    }
+    document.getElementById('starMapClose').onclick = () => {
+      document.getElementById('starMap').style.display = 'none'
+    }
+
+    /* 初始化 */
+    fetchTimeline()
+  </script>
+</body>
+</html>
