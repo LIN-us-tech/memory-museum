@@ -392,6 +392,23 @@
                     <input type="file" id="photo-input" accept="image/*" class="hidden">
                 </div>
                 <img id="photo-preview" class="hidden w-48 h-48 object-cover rounded-lg">
+                
+                <!-- 音频上传区域 -->
+                <div id="audio-upload-area" class="mt-4 w-full border-2 border-dashed border-museum-gold rounded-lg flex items-center justify-center cursor-pointer hover:bg-museum-bg-light transition-colors py-4">
+                    <div class="text-center">
+                        <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1" class="mx-auto mb-2 text-museum-gold">
+                            <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/>
+                            <path d="M19 10v2a7 7 0 01-14 0v-2"/>
+                            <line x1="12" y1="19" x2="12" y2="23"/>
+                            <line x1="8" y1="23" x2="16" y2="23"/>
+                        </svg>
+                        <p class="text-sm text-museum-text-light">点击上传音频</p>
+                    </div>
+                    <input type="file" id="audio-input" accept="audio/*" class="hidden">
+                </div>
+                <div id="audio-preview" class="hidden mt-4 w-full">
+                    <audio id="audio-player" controls class="w-full"></audio>
+                </div>
             </div>
             
             <!-- 表单 -->
@@ -514,6 +531,14 @@
                             在地图上发光 ✨
                         </button>
                     </div>
+                    ${memory.audioUrl ? `
+                    <div class="mt-4">
+                        <audio controls class="w-full" preload="none">
+                            <source src="${memory.audioUrl}" type="audio/mpeg">
+                            您的浏览器不支持音频播放。
+                        </audio>
+                    </div>
+                    ` : ''}
                 </div>
             `;
             
@@ -693,6 +718,7 @@
                 memory.set('title', memoryData.title);
                 memory.set('description', memoryData.description);
                 memory.set('photoUrl', memoryData.photoUrl);
+                memory.set('audioUrl', memoryData.audioUrl);
                 memory.set('location', memoryData.location);
                 memory.set('timestamp', memoryData.timestamp);
                 memory.set('color', memoryData.color);
@@ -703,6 +729,25 @@
                 
             } catch (error) {
                 console.error('保存记忆失败:', error);
+                throw error;
+            }
+        }
+
+        // 保存音频到 LeanCloud
+        async function saveAudioToLeanCloud(audioFile) {
+            if (!isLeanCloudInitialized) {
+                throw new Error('LeanCloud 未初始化');
+            }
+            
+            try {
+                // 创建 AV.File 对象
+                const audioAVFile = new AV.File(audioFile.name, audioFile);
+                await audioAVFile.save();
+                
+                // 返回音频文件的 URL
+                return audioAVFile.url();
+            } catch (error) {
+                console.error('音频上传失败:', error);
                 throw error;
             }
         }
@@ -734,6 +779,7 @@
                     title: item.get('title'),
                     description: item.get('description'),
                     photoUrl: item.get('photoUrl'),
+                    audioUrl: item.get('audioUrl'),
                     location: item.get('location'),
                     timestamp: item.get('timestamp'),
                     color: item.get('color') || getRandomGradient()
@@ -757,6 +803,7 @@
                     description: formData.get('description'),
                     location: formData.get('location'),
                     photoUrl: formData.get('photoUrl'),
+                    audioUrl: formData.get('audioUrl'),
                     timestamp: Date.now(),
                     color: getRandomGradient()
                 };
@@ -920,8 +967,27 @@
                 }
             });
             
+            // 音频上传
+            document.getElementById('audio-upload-area').addEventListener('click', () => {
+                document.getElementById('audio-input').click();
+            });
+            
+            document.getElementById('audio-input').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const audioPlayer = document.getElementById('audio-player');
+                    const audioPreview = document.getElementById('audio-preview');
+                    const audioUploadArea = document.getElementById('audio-upload-area');
+                    
+                    // 设置音频源
+                    audioPlayer.src = URL.createObjectURL(file);
+                    audioPreview.classList.remove('hidden');
+                    audioUploadArea.classList.add('hidden');
+                }
+            });
+            
             // 表单提交
-            document.getElementById('memory-form').addEventListener('submit', (e) => {
+            document.getElementById('memory-form').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 
                 const formData = new FormData();
@@ -934,12 +1000,32 @@
                     formData.append('photoUrl', photoPreview.src);
                 }
                 
+                // 处理音频文件
+                const audioInput = document.getElementById('audio-input');
+                if (audioInput.files.length > 0) {
+                    const audioFile = audioInput.files[0];
+                    // 保存音频文件到 LeanCloud
+                    if (isLeanCloudInitialized) {
+                        try {
+                            const audioUrl = await saveAudioToLeanCloud(audioFile);
+                            formData.append('audioUrl', audioUrl);
+                        } catch (error) {
+                            console.error('音频上传失败:', error);
+                            showNotification('音频上传失败，请重试', 'error');
+                        }
+                    }
+                }
+                
                 saveMemory(formData);
                 
                 // 重置表单
                 document.getElementById('memory-form').reset();
                 document.getElementById('photo-preview').classList.add('hidden');
                 document.getElementById('photo-upload-area').classList.remove('hidden');
+                document.getElementById('audio-preview').classList.add('hidden');
+                document.getElementById('audio-upload-area').classList.remove('hidden');
+                const audioPlayer = document.getElementById('audio-player');
+                audioPlayer.src = '';
             });
             
             // 空状态按钮
