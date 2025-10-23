@@ -288,7 +288,7 @@
                 <div class="flex space-x-6">
                     <button id="gallery-btn" class="text-museum-text hover:text-museum-gold transition-colors">展厅</button>
                     <button id="star-map-btn" class="text-museum-text hover:text-museum-gold transition-colors">星图</button>
-                    <button id="map-btn" class="text-museum-text hover:text-museum-gold transition-colors">地图</button>
+                    <button id="map-btn" class="text-museum-text hover:text-museum-gold transition-colors">寄语</button>
                 </div>
             </div>
         </div>
@@ -348,13 +348,19 @@
         <section id="map-view" class="hidden min-h-screen">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <div class="text-center mb-12">
-                    <h2 class="text-4xl font-display font-bold mb-4 text-museum-gold">记忆地图</h2>
-                    <p class="text-xl text-museum-text-light max-w-2xl mx-auto">
-                        每一段记忆都有它的归属地，在粤港澳大湾区的各个角落闪闪发光，共同构成我们的集体记忆版图。
+                    <h2 class="text-4xl font-display font-bold mb-4 text-museum-gold">湾区记忆寄语</h2>
+                    <p class="text-xl text-museum-text-light max-w-2xl mx-auto text-left">
+                        &nbsp;&nbsp;粤港澳大湾区，这片充满活力与创新精神的土地，承载着无数人的梦想与回忆。从繁华的都市到宁静的乡村，从高楼林立的商业区到风景如画的自然景区，每一个地方都记录着独特的故事，每一段记忆都闪耀着它的光芒。
                     </p>
-                </div>
-                <div id="memory-map" class="w-full h-96 bg-museum-bg-light rounded-lg flex items-center justify-center">
-                    <p class="text-museum-text-light">地图功能即将上线</p>
+                    <p class="text-xl text-museum-text-light max-w-2xl mx-auto mt-4 text-left">
+                        &nbsp;&nbsp;在这片土地上，无论是土生土长的居民，还是来自五湖四海的追梦人，都在用自己的方式书写着历史。湾区的每一个角落，都充满了生机与活力，它们见证了无数的欢笑与泪水，成功与挫折，相聚与离别。这些记忆，如同珍珠般串联起来，构成了我们共同的集体记忆版图。
+                    </p>
+                    <p class="text-xl text-museum-text-light max-w-2xl mx-auto mt-4 text-left">
+                        &nbsp;&nbsp;每一段记忆都是宝贵的，它们不仅属于个人，也属于整个大湾区。这些记忆，无论是喜悦还是悲伤，成功还是失败，都是我们共同的财富。它们让我们更加珍惜现在，激励我们勇敢地面对未来。
+                    </p>
+                    <p class="text-xl text-museum-text-light max-w-2xl mx-auto mt-4 text-left">
+                        &nbsp;&nbsp;让我们珍视每一段记忆，让它们在粤港澳大湾区的每一个角落继续发光发热，共同绘制出一幅丰富多彩的集体记忆版图。这不仅记录了我们的过去，也将指引我们走向更加辉煌的未来。
+                    </p>
                 </div>
             </div>
         </section>
@@ -365,6 +371,36 @@
         <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 5v14M5 12h14"/>
         </svg>
+    </div>
+    
+    <!-- 记忆详情模态框 -->
+    <div id="memory-detail-modal" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-serif font-bold text-museum-gold">记忆详情</h3>
+                <button id="close-detail-modal" class="text-museum-text-light hover:text-museum-text">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="text-center">
+                <div class="mb-6">
+                    <img id="detail-memory-photo" src="" alt="记忆照片" class="w-64 h-64 object-cover rounded-lg mx-auto">
+                </div>
+                
+                <div class="text-left">
+                    <p class="text-museum-text-light mb-2">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1" class="inline mr-2">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+                            <circle cx="12" cy="10" r="3"/>
+                        </svg>
+                        <span id="detail-memory-location"></span>
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
     
     <!-- 添加记忆模态框 -->
@@ -696,13 +732,14 @@
         }
         
         // 显示记忆详情
+        // 显示记忆详情
         function showMemoryDetail(memory) {
-            alert(`记忆详情：\n${memory.title}\n\n${memory.description}\n\n地点：${memory.location}\n时间：${formatDate(memory.timestamp)}`);
-        }
-        
-        // 在地图上查看
-        function viewOnMap(memoryId) {
-            alert('地图功能即将上线，敬请期待！');
+            // 设置模态框内容
+            document.getElementById('detail-memory-photo').src = memory.photoUrl || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjMkQyRDJEIi8+CjxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjIwIiBzdHJva2U9IiNGRkY1RjUiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIvPgo8L3N2Zz4K';
+            document.getElementById('detail-memory-location').textContent = memory.location || '未知地点';
+            
+            // 显示模态框
+            document.getElementById('memory-detail-modal').classList.add('active');
         }
         
         // 保存记忆到 LeanCloud
@@ -940,10 +977,22 @@
                 document.getElementById('add-memory-modal').classList.remove('active');
             });
             
+            // 关闭记忆详情模态框
+            document.getElementById('close-detail-modal').addEventListener('click', () => {
+                document.getElementById('memory-detail-modal').classList.remove('active');
+            });
+            
             // 点击模态框外部关闭
             document.getElementById('add-memory-modal').addEventListener('click', (e) => {
                 if (e.target === e.currentTarget) {
                     document.getElementById('add-memory-modal').classList.remove('active');
+                }
+            });
+            
+            // 点击记忆详情模态框外部关闭
+            document.getElementById('memory-detail-modal').addEventListener('click', (e) => {
+                if (e.target === e.currentTarget) {
+                    document.getElementById('memory-detail-modal').classList.remove('active');
                 }
             });
             
