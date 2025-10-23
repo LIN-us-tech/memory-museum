@@ -467,7 +467,7 @@
             try {
                 AV.init({
                     appId: '7gVEbYY5q3wVTI4tzphtcvbr-gzGzoHsz',
-                    appKey: 'AppKeyDI6vIMLAN9nDtVtU3qePSWaC',
+                    appKey: 'DI6vIMLAN9nDtVtU3qePSWaC',
                     serverURL: 'https://7gvebyy5.lc-cn-n1-shared.com'
                 });
                 isLeanCloudInitialized = true;
@@ -712,7 +712,7 @@
         async function loadMemoriesFromLeanCloud() {
             if (!isLeanCloudInitialized) {
                 console.warn('LeanCloud 未初始化，使用示例数据');
-                loadSampleMemories();
+                loadMemories(); // 改为调用已存在的 loadMemories 函数
                 return;
             }
             
@@ -725,7 +725,7 @@
                 
                 if (results.length === 0) {
                     console.log('没有找到记忆数据，使用示例数据');
-                    loadSampleMemories();
+                    loadMemories(); // 改为调用已存在的 loadMemories 函数
                     return;
                 }
                 
@@ -745,7 +745,7 @@
                 
             } catch (error) {
                 console.error('从 LeanCloud 加载记忆失败:', error);
-                loadSampleMemories();
+                loadMemories(); // 改为调用已存在的 loadMemories 函数
             }
         }
 
